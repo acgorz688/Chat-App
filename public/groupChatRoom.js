@@ -161,7 +161,7 @@ function outputMessgae(data){
     console.log(data)
     var temp = document.createElement("p");
     temp.innerHTML =  `<p>${getTime()} <br /> <img src="https://ptetutorials.com/images/user-profile.png" alt="sunil" style="width: 30px;height: 30px;">
-    ${data.username}:${data.userMessage}   <button id="mark" value="${data.id}" onclick="mark(${data.id})"/>Mark</button> 
+    ${data.username}:${data.message}   <button id="mark" value="${data.id}" onclick="mark(${data.id})"/>Mark</button> 
     </p>
     `;
     output.appendChild(temp);
@@ -220,11 +220,26 @@ function getTime(){
 };
 
 function outputChatHistory(chathistory){
+    console.log(chathistory);
     for(var i=0;i<chathistory.length;i++){
         var temp = document.createElement("p");
-        temp.innerHTML =  `<p>${chathistory[i].time} <br /> <img src="https://ptetutorials.com/images/user-profile.png" alt="sunil" style="width: 30px;height: 30px;">
-             ${chathistory[i].senderid}:${chathistory[i].message} <button id="mark" value="${chathistory[i].id}" onclick="mark(this.value)" />Mark</button> 
-             </p>`;
+        if(chathistory[i].message.length>500){
+            console.log(chathistory[i].message.length);
+            var message = chathistory[i].message.substring(0,500);
+            temp.innerHTML =  `<p >${chathistory[i].time} <br /> <img src="https://ptetutorials.com/images/user-profile.png" alt="sunil" style="width: 30px;height: 30px;">
+            ${chathistory[i].senderid}:
+            <p id ="${chathistory[i].id}">${message}...... </p> 
+            <button id = "view${chathistory[i].id}" class="viewAll" value = "${chathistory[i].message}" onclick="viewAll(this.value,${chathistory[i].id})" >View All</button>
+            <button id = "less${chathistory[i].id}" class="showLess" value = "${message}......" onclick="showless(this.value,${chathistory[i].id})"  style="display: none;">Show Less</button>
+            <button id="mark" value="${chathistory[i].id}" onclick="mark(this.value)" />Mark</button>
+            </p>`;
+        }
+        else{
+            temp.innerHTML =  `<p>${chathistory[i].time} <br /> <img src="https://ptetutorials.com/images/user-profile.png" alt="sunil" style="width: 30px;height: 30px;">
+            ${chathistory[i].senderid}:<p>${chathistory[i].message}<p> <button id="mark" value="${chathistory[i].id}" onclick="mark(this.value)" />Mark</button> 
+            </p>`;
+        }
+       
         output.appendChild(temp);
         output.scrollTop = output.scrollHeight;  
     }
@@ -238,6 +253,21 @@ function mark(value){
      messageid:value
     })
  }
+
+ function viewAll(fullyMessage,id){
+    document.getElementById(id).innerHTML =  `<p id ="${id}">${fullyMessage}</p>` 
+    document.getElementById("view"+id).style.display = "none";
+    document.getElementById("less"+id).style.display = "block";
+
+    // console.log(document.getElementById("view"+id));
+    //document.getElementById("view"+id).innerHTML =`<button "class="viewAll" value = "${shortMessage}" onclick="showless(this.value,${id})" />Show Less</button></p>`;
+}
+
+function showless(shortMessage,id){
+    document.getElementById(id).innerHTML =  `<p id ="${id}">${shortMessage}</p>`;
+    document.getElementById("view"+id).style.display = "block";
+    document.getElementById("less"+id).style.display = "none";
+}
 
 
 function userListWithUnread(userlist, unreadlist){
@@ -300,7 +330,7 @@ sendBtn.addEventListener('click',()=>{
             id:Date.now(),
             username:username, 
             groupId:groupId,
-            userMessage:userMessage.value,
+            message:userMessage.value,
             time:getTime()
         });
         userMessage.value='';
@@ -319,7 +349,7 @@ document.onkeydown = function(event){
                 id:Date.now(),
                 username:username, 
                 groupId:groupId,
-                userMessage:userMessage.value,
+                message:userMessage.value,
                 time:getTime()
             });
             userMessage.value='';

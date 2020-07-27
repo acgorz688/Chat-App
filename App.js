@@ -118,7 +118,6 @@ io.on('connection',socket =>{
   socket.on('chatMessage',data=>{
     process();
     async function process(){
-
       const user = await getUserByName(data.username,data.groupId);
       await saveGroupMessage(data);
       io.to(user[0].groupid).emit('message',data);
@@ -742,7 +741,7 @@ function saveGroupMessage(data){
       id:data.id,
       senderid:data.username,
       receiverid:data.groupId,
-      message:data.userMessage,
+      message:data.message,
       time:getTime(),
     };
     let sql = `INSERT INTO groupchathistory SET ?`;
