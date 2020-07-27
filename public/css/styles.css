@@ -379,3 +379,12 @@ a.socialIcon:hover,
     margin-top: 20%;
     margin-left: 10%;
 }
+
+#mark{
+    background-color: rgb(217, 255, 0);
+    float: right;
+}
+
+#MarkedMessage{
+    float: right;
+}

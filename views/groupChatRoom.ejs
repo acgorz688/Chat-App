@@ -18,44 +18,70 @@
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Logo_TV_2015.svg/1200px-Logo_TV_2015.svg.png" width="30" height="30" class="d-inline-block align-top" alt="" loading="lazy">
         Chat App NAME
       </a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-        <div class="navbar-nav">
-          <a id="homeBtn"></a>
-          <a id="createGroupBtn"></a>
-          <a id ="singInBtn"></a>
+    
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a id="homeBtn"></a>
+          </li>
+          <li class="nav-item">
+            <a id="createGroupBtn"></a>
+          </li>
+          <li class="nav-item">
+            <a id ="singInBtn"></a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Dropdown
+            </a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <a id = "markedMessage" ></a>
+              <a class="dropdown-item" href="#">Another action</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="#">Something else here</a>
+            </div>
+          </li>
+        </ul>
+        <div class="form-inline my-2 my-lg-0">
+          <input id="searchInput" class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+          <button id="searchBtn" class="btn btn-outline-success my-2 my-sm-0">Search</button>&nbsp
+          <button id="backBtn" class="btn btn-outline-success my-2 my-sm-0">Back</button>
+          &nbsp&nbsp&nbsp&nbsp&nbsp
           <a id = "logout"></a>
         </div>
       </div>
     </nav>
     <div class="container" style="border-radius: 10px;">
-        <div id ="chatPage" class="row">
-            <div  id="sidebar"class="col-2" style="background-color: #043f9d;">
-                <div class="btn-group-vertical">
-                    <h4 id="groupName"></h4>
-                    <div id="displayUsername"></div>
-                    <div id="onlineUser"></div>
-                </div>
-            </div>
-            <div id="chatWindow" class="col-10" style="background-color: lightblue;">
-                <div id="messageBox" style="background-color: white;">
-                    <div id="output"></div>
-                    <div id ="newMessage"></div>
-                    <div id ="feedback"></div>
-                </div>
-                <div id="sendBox">
-                    <input id="message" type="text" placeholder="Message">
-                    <input type = "submit" id="send" value = "Send">
-                  <!-- <form action="/upload" method="POST" enctype="multipart/form-data">
-                    <input  id = "file" type="file" name="fliename">
-                    <input  id="upload" type ="submit" value="Upload">
-                  </form> -->
-                </div>
-            </div>
 
-        </div>
+        <div id ="chatPage" class="row">
+          <div  id="sidebar"class="col-2" style="background-color: #043f9d;">
+              <div class="btn-group-vertical">
+                  <h4 id="groupName"></h4>
+                  <div id="displayUsername"></div>
+                  <div id="onlineUser"></div>
+              </div>
+          </div>
+          <div id="chatWindow" class="col-10" style="background-color: lightblue;">
+              <div id="messageBox" style="background-color: white;">
+                  <div id="output">
+                    <div id="outputMsg"></div>
+                  </div>
+                  <div id ="feedback"></div>
+              </div>
+              <div id="sendBox">
+                  <input id="message" type="text" placeholder="Message">
+                  <input type = "submit" id="send" value = "Send">
+                <form id="uploadFile" action="/upload" method="POST" enctype="multipart/form-data">
+                  <input  id = "file" type="file" name="fliename">
+                  <input  id="upload" type ="submit" value="Upload">
+                </form>
+              </div>
+          </div>
+  </div>
+        
       </div>
   </body>
 

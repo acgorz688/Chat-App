@@ -6,12 +6,14 @@ const bcrypt = require('bcrypt');
 const mysql = require('mysql');
 const path = require('path');
 const session = require('express-session');
-const upload = require('express-fileupload');
+//const upload = require('express-fileupload');
+const multer = require('multer');
+const { resolve } = require('path');
 
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(upload());
+//app.use(upload());
 app.set('view-engin','ejs');
 app.use(express.urlencoded({ extended: false }))
 app.use(session({
@@ -19,6 +21,22 @@ app.use(session({
   resave:false,
   saveUninitialized: true
 }));
+
+// Set The Storage Engine
+const storage = multer.diskStorage({
+  destination: './uploads/',
+  filename: function(req, file, cb){
+    cb(null,file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  }
+});
+// Init Upload
+const upload = multer({
+  storage: storage,
+  limits:{fileSize: 1000000},
+  // fileFilter: function(req, file, cb){
+  //   checkFileType(file, cb);
+  // }
+}).single('fliename');
 
 //connect database
 const db = mysql.createConnection({
@@ -58,6 +76,33 @@ io.on('connection',socket =>{
     }
   });
 
+  socket.on('markedMsgPage',data=>{
+   process();
+   async function  process(){
+     console.log('id: '+ socket.id)
+    var result =await  findMarkedMessage(data.username);
+    io.to(socket.id).emit('loadMarkMessage',{result:result});
+    }
+    
+  })
+
+  socket.on('searchMarkedMsg',data=>{
+    console.log(data);
+    process();
+    async function process(){
+      var result = await searchMarkedMessage(data.username,data.keywords);
+      io.to(socket.id).emit('searchMarkedMsgResult',{result:result});
+    }
+  });
+
+  socket.on('removeMarkedMsg',data=>{
+    process();
+    async function process(){
+     var result = await removeMarkedMsg(data.id);
+     io.to(socket.id).emit('removeMarkedMsg', {result:result});
+    };
+  });
+
   socket.on('getHistory',data=>{
     process();
     async function process(){
@@ -73,6 +118,7 @@ io.on('connection',socket =>{
   socket.on('chatMessage',data=>{
     process();
     async function process(){
+
       const user = await getUserByName(data.username,data.groupId);
       await saveGroupMessage(data);
       io.to(user[0].groupid).emit('message',data);
@@ -85,8 +131,7 @@ io.on('connection',socket =>{
      const groupId ='p' + new Date().getTime();
      await updatePreviousChat(data.sender,data.receiver);
      const user =  await userJoin(socket.id,data.sender,groupId);
-     console.log('private:');
-     console.log(user);
+
      const chathistory = await getChatHistory(data.sender,data.receiver);
      io.to(socket.id).emit('chatRecord',{
       chathistory:JSON.stringify(chathistory)
@@ -193,60 +238,47 @@ io.on('connection',socket =>{
   });
 
   socket.on('upload',data=>{
-    console.log('get in socket update...');
-    console.log(data.file);
-  })
-});
-
-function logout(username){
-  return new Promise((resolve,reject)=>{
-  let sql = `DELETE FROM loginuser WHERE username ='${username}'`
-  let query = db.query(sql,(err,result)=>{
-  if(err){throw err};
-    console.log(result);
-    resolve(true);
-  })
-  })
-};
-
-function updateMessage(data){
-  return new Promise((resolve,reject)=>{
-    let sql = `UPDATE chathistory SET status = 'yes' WHERE senderid = '${data.receiver}' && receiverid = '${data.sender}'`;
-    let query = db.query(sql,(err,result)=>{
-      if(err){throw err};
-      resolve(true);
-    });
-  });
-};
-
-function findMessage(id){
-  return new Promise((resolve,reject)=>{
-    let sql = `SELECT * FROM chathistory WHERE id = '${id}'`;
-    let query = db.query(sql,(err,result)=>{
-      if(err){throw err};
-      resolve(result);
-    });
-  });
-}
-
-function transferMessage(receiver,data){
-  return new Promise((resolve,reject)=>{
-   
-    if(receiver.length != 0){
-      //receiver online
-      for(var i = 0; i< receiver.length;i++){
-        io.to(receiver[i].socketid).emit('newMessage',{
-          message:data,
-        });
-      };
-      resolve(true);
-    }else{
-      resolve(false);
-      //save message then send to receiver when receiver back online.
+    process();
+    async function process(){
+      console.log(data.file);
+      await uploadFile(data.user,data.file,data.groupid);
     }
-   
+  })
+
+  socket.on('search',data=>{
+    process();
+    async function process(){
+      var result = await search(data.keywords);
+      result = await formatearchData(result);
+      io.to(socket.id).emit('searchResult',{
+        result:result
+      })
+    }
+  })
+
+  socket.on('markMessage',data=>{
+    process();
+    async function process(){
+ 
+      var result;
+      var msg = await findGroupMessage(data.messageid);
+      var valideMarkMessage = await valideMarkMsg(data.messageid,data.user);
+      if(valideMarkMessage == true){
+        result = await markMessage(msg,data.user);
+      }
+      else{
+        result = false;
+      }
+      io.to(data.socketid).emit('markMessage',{
+        result:result
+      })
+    }
+  })
+
+  socket.on('getMarkedMsg', data=>{
+ 
   });
-};
+});
 
   //router
 app.get('/register',(req,res)=>{
@@ -391,12 +423,84 @@ app.get('/register',(req,res)=>{
     }
   }
 
+})
+.post('/upload',(req,res)=>{
+    upload(req, res, (err) => {
+      if(err){
+       throw err
+      } else {
+        var file = `uploads/${req.file.filename}`
+        uploadFile('uploaduser',file,'groupid')
+      }
+  });
+})
+.get('/markedMessage/:userId',(req,res)=>{
+  res.render('markedMsg.ejs');
 });
-// .post('/upload',(req,res)=>{
-//   if(req.files){
-//     console.log(req.files);
-//   }
-// })
+
+//function
+function removeMarkedMsg(id){
+  return new Promise((resolve,reject)=>{
+    let sql = `DELETE FROM markedmessage WHERE id ='${id}'`
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};        
+      resolve(true);
+    })
+})
+}
+
+function valideMarkMsg(messageid,user){
+  return new Promise((resolve,reject)=>{
+    console.log("id: "+ messageid + " user: "+ user);
+    let sql = `SELECT * FROM markedMessage WHERE markedUser = '${user}' && messageId = '${messageid}'`;
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};
+      if(result.toString() == ''){
+        console.log('true');
+        resolve(true);
+      }else{
+        console.log(result);
+        console.log('false');
+        resolve(false);
+      }
+    });
+  });
+}
+
+function findMarkedMessage(username){
+  return new Promise((resolve,reject)=>{
+    let sql = `SELECT * FROM markedmessage WHERE markedUser ='${username}'`;
+    let query = db.query(sql,(err,result) =>{
+      if(err){
+        throw error;
+      };
+      resolve(result);
+    })
+  });
+}
+
+function searchMarkedMessage(username,keywords){
+  return new Promise((resolve,reject)=>{
+    let sql = `SELECT * FROM markedmessage WHERE markedUser = '${username}' && message like '%${keywords}%'`;
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};
+      resolve(result);
+    });
+  });
+}
+
+function search(keywords){
+  return new Promise((resolve,reject)=>{
+    console.log('keywords type:' + typeof(keywords));
+    var temp =[];
+    let sql = `SELECT * FROM groupchathistory WHERE message like '%${keywords}%'`;
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};
+      resolve(result);
+    });
+   
+  });
+}
 
 function checkGroup(groupId){
   return new Promise((resolve,reject)=>{
@@ -635,6 +739,7 @@ function saveGroupMessage(data){
   return new Promise((resolve,reject)=>{
     let newRecord = 
     {
+      id:data.id,
       senderid:data.username,
       receiverid:data.groupId,
       message:data.userMessage,
@@ -645,7 +750,7 @@ function saveGroupMessage(data){
       if(err){
         throw(err);
       }   
-      resolve(result.insertId);
+      resolve(true);
     });
   });
 };
@@ -684,6 +789,99 @@ function unreadmessage(user){
     });
   });
 }
+
+function uploadFile(uploaduser,file,groupid){
+  return new Promise((resolve,reject)=>{
+    let newFile = {id:Date.now(), uploaduser:uploaduser, file:file,groupid:groupid}
+    let sql = 'INSERT INTO uploadfile SET ?';
+    let query = db.query(sql,newFile,(err,result)=>{
+      if(err){throw err};
+      resolve(true);
+    });
+  });
+}
+
+function findGroupMessage(messageid){
+  return new Promise((resolve,reject)=>{
+    let sql = `SELECT * FROM groupchathistory WHERE id = '${messageid}'`;
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};
+      resolve(result[0]);
+    });
+  });
+}
+
+
+function markMessage(data,user){
+  return new Promise((resolve,reject)=>{
+    let markedMsg = {messageId:data.id,markedUser:user,senderid:data.senderid,receiverid:data.receiverid,message:data.message,msgtime:data.time,markedtime:getTime()};
+    let sql = 'INSERT INTO markedmessage SET ?';
+    let query = db.query(sql,markedMsg,(err,result)=>{
+      if(err){resolve(false)};
+      resolve(true);
+    });
+  });
+}
+
+
+function formatearchData(data){
+  return new Promise((resolve,reject)=>{
+    var temp = [];
+    for(var i=0;i<data.length;i++){
+      temp[i] = {sender:data[i].senderid,msg:data[i].message,time:data[i].time};
+    }
+    resolve (temp);
+  });  
+}
+
+function logout(username){
+  return new Promise((resolve,reject)=>{
+  let sql = `DELETE FROM loginuser WHERE username ='${username}'`
+  let query = db.query(sql,(err,result)=>{
+  if(err){throw err};
+    resolve(true);
+  })
+  })
+};
+
+function updateMessage(data){
+  return new Promise((resolve,reject)=>{
+    let sql = `UPDATE chathistory SET status = 'yes' WHERE senderid = '${data.receiver}' && receiverid = '${data.sender}'`;
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};
+      resolve(true);
+    });
+  });
+};
+
+function findMessage(id){
+  return new Promise((resolve,reject)=>{
+    let sql = `SELECT * FROM chathistory WHERE id = '${id}'`;
+    let query = db.query(sql,(err,result)=>{
+      if(err){throw err};
+      resolve(result);
+    });
+  });
+}
+
+function transferMessage(receiver,data){
+  return new Promise((resolve,reject)=>{
+   
+    if(receiver.length != 0){
+      //receiver online
+      for(var i = 0; i< receiver.length;i++){
+        io.to(receiver[i].socketid).emit('newMessage',{
+          message:data,
+        });
+      };
+      resolve(true);
+    }else{
+      resolve(false);
+      //save message then send to receiver when receiver back online.
+    }
+   
+  });
+};
 
 
 // socket function 
